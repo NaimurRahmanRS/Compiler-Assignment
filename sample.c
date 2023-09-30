@@ -14,10 +14,17 @@ vari main(){
 	c--;
 	c gr 5;
 	5 ne 4;
+array vari h of 10;
+array vari d of 3;
 if(a||b)
 if(!a)
 a+b;
 b$a;
+}
+
+loopw as a eq b 
+{
+int x; 
 }
 
 varf function add(vari x, vari y){

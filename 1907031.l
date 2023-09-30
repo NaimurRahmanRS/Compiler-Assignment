@@ -7,7 +7,7 @@
 #include<stdlib.h>
 
 // keyword and datatype string collection
-const char* keywords[] = {"vari","varf","varc","start","end","return","function","is","or","oris","si","loopf","loopw","ls","gr","eq","ge","le","ne","void",NULL};
+const char* keywords[] = {"vari","varf","varc","start","end","return","function","is","or","oris","si","loopf","loopw","ls","gr","eq","ge","le","ne","void","as","array",NULL};
 const char* datatype[] = {"vari","varf","varc",NULL};
 
 // check if a new variable name is a keyword
@@ -80,7 +80,7 @@ int update_value(const char* name, const char* value) {
 char s[1000];
 int var_count=0, statement_count=0, function_count=0, header_count=0, temp_var_count=0, i=0;
 int Unary_operator_count=0, Relational_operator_count=0, Assignment_operator_count=0, Logical_operator_count=0, Arithmatic_operator_count=0;
-int mcmt_count=0, scmt_count=0;
+int mcmt_count=0, scmt_count=0, array_count=0;
 int is_declared_check=0;
 %}
 
@@ -150,7 +150,12 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
                     *init_value = '\0'; // Null-terminate the variable name
                     const char* varName = token;
                     if (is_declared(varName)) {
-                        printf("ERROR: Variable '%s' is already declared.\n", token);
+                        printf("ERROR: Variable '%s' is already declared.\n", varName);
+                        invalid = 1;
+                        break;
+                    }
+                    if (is_keyword(varName)) {
+                        printf("ERROR: Reserved keyword can't be used as a variable name: %s\n", varName);
                         invalid = 1;
                         break;
                     }
@@ -189,6 +194,57 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
         update_value(var, val); // Update the variable value
     }
     
+}
+
+"array"[ ]+{datatype}[ ]+{ID}[ ]+"of"[ ]+{int} {
+    char* token = strtok(yytext, " \t");
+    char* type;
+    int invalid = 0;
+    while (token != NULL) {
+        if(strcmp(token, "array")==0){
+            
+        }
+        else if (!is_datatype(token)) {
+            if (is_keyword(token)) {
+                printf("ERROR: Reserved keyword can't be used as a variable name: %s\n", token);
+                invalid = 1;
+                break;
+            }
+            if (is_declared(token)) {
+                printf("ERROR: Variable '%s' is already declared.\n", token);
+                invalid = 1;
+                break;
+            } else {
+                insert_variable(token, type, "");
+                printf("Variable name: %s, Datatype: %s\n", token, type);
+            }
+            array_count++;
+            break;
+        }
+        else{
+            type = token;
+        }
+        token = strtok(NULL, " \t");
+    }
+    if (!invalid) {
+        printf("Array declared\n");
+    }
+} 
+
+"loopw"[ ]+"as"[ ]+ { BEGIN(CONDITION); }
+<CONDITION>({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string})({Logical_operator}({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string}))* {
+    printf("while condition\n");
+    BEGIN(WHILE_BODY);
+}
+
+<WHILE_BODY>"{"  { printf("WHILE LOOP: Start\n"); }
+<WHILE_BODY>"}"  { 
+    printf("WHILE LOOP: End\n");
+    BEGIN(INITIAL);
+}
+<WHILE_BODY>.*  { 
+    // Process the code block here, e.g., "do something"
+    printf("WHILE LOOP Code: %s\n", yytext);
 }
 
 ; {statement_count++;}
@@ -252,6 +308,7 @@ int main()
 	yyin = fopen( "sample.c", "r" );
 	yylex();
     printf("%d variables declared\n", var_count);
+    printf("%d arrays declared\n", array_count);
     printf("%d functions declared\n", function_count);
     printf("%d headers declared\n", header_count);
     printf("%d Unary operators\n", Unary_operator_count);
