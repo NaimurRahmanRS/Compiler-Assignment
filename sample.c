@@ -1,14 +1,15 @@
 //Single
-/~ Multi lkjadlk
+/* Multi lkjadlk
 snlafl
 lkshlkfa
-lkaslk ~/
+lkaslk */
 #include<stdio.h>
 vari main(){
-	vari a,b,c,d=a-b;
+	vari a,b,c,d=a;
 	varf c="abc";
 	varc c=10; 
 	return 0;
+	d=4;
 	c++;
 	c--;
 	c gr 5;
@@ -19,8 +20,8 @@ a+b;
 b$a;
 }
 
-varf add(vari x, vari y){
+varf function add(vari x, vari y){
 }
 
-void sub(){
+void function sub(){
 }
