@@ -16,16 +16,28 @@ vari main(){
 	5 ne 4;
 array vari h of 10;
 array vari d of 3;
-if(a||b)
-if(!a)
+is a gr b
+{
+abcd
+}
+oris a ne c
+{
+egf
+}
+si
 a+b;
 b$a;
 }
 
-loopw as a eq b 
-{
+loopw as a eq b
+begin
 int x; 
-}
+end
+
+loopf with a 1...3 1
+begin
+int y;
+end
 
 varf function add(vari x, vari y){
 }

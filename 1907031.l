@@ -7,13 +7,35 @@
 #include<stdlib.h>
 
 // keyword and datatype string collection
-const char* keywords[] = {"vari","varf","varc","start","end","return","function","is","or","oris","si","loopf","loopw","ls","gr","eq","ge","le","ne","void","as","array",NULL};
+const char* keywords[] = {"vari","varf","varc","begin","end","return","function","with","is","or","oris","si","loopf","loopw","ls","gr","eq","ge","le","ne","void","as","array","of",NULL};
 const char* datatype[] = {"vari","varf","varc",NULL};
+const char* relation[] = {"ls","gr","le","ge","eq","ne",NULL};
+const char* logic[] = {"&&","||",NULL};
 
 // check if a new variable name is a keyword
 int is_keyword(const char* word) {
     for (int i = 0; keywords[i] != NULL; i++) {
         if (strcmp(keywords[i], word) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// check if it is a logical operator
+int is_logic(const char* word) {
+    for (int i = 0; logic[i] != NULL; i++) {
+        if (strcmp(logic[i], word) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// check if it is a relational operator
+int is_relation(const char* word) {
+    for (int i = 0; relation[i] != NULL; i++) {
+        if (strcmp(relation[i], word) == 0) {
             return 1;
         }
     }
@@ -56,11 +78,11 @@ int is_declared(const char* name) {
     struct Symbol_Table* tmp = head;
     while (tmp != NULL) {
         if (strcmp(tmp->name, name) == 0) {
-            return 1; // variable is already declared
+            return 1;
         }
         tmp = tmp->next;
     }
-    return 0; // variable is not declared
+    return 0;
 }
 
 // update the value of a variable in the symbol table
@@ -77,21 +99,22 @@ int update_value(const char* name, const char* value) {
     return 0; 
 }
 
-char s[1000];
+// variables needed for operations
 int var_count=0, statement_count=0, function_count=0, header_count=0, temp_var_count=0, i=0;
 int Unary_operator_count=0, Relational_operator_count=0, Assignment_operator_count=0, Logical_operator_count=0, Arithmatic_operator_count=0;
 int mcmt_count=0, scmt_count=0, array_count=0;
-int is_declared_check=0;
+int is_declared_check=0, conditional_count=0, loop_count=0;
 %}
 
-/* Labels for future need */
-%x CONDITION
+/* labels for future need */
+%x WHILE_CONDITION
 %x WHILE_BODY
-%x WHILE_BEGIN
-%x WHILE_END
-%x IF_BODY
-%x IF_CONDITION
+%x FOR_CONDITION
+%x FOR_BODY
+%x IS_BODY
+%x IS_CONDITION
 
+/* defining regex */
 char [a-zA-Z]
 digit [0-9]
 special [_@]
@@ -115,21 +138,25 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
 
 %%
 
-{scmt} { 
+{scmt} {
+    //single line comment detection 
     scmt_count++;
-    printf("single line comment\n"); 
+    printf("Single Line Comment\n"); 
 }
+
 {mcmt} { 
+    //multi line comment detection
     mcmt_count++;
-    printf("multiple line comment\n");
+    printf("Multiple Line Comment\n");
 }
 
 
 {datatype}[ ]+{ID}("="({ID}|{int}|{float}|{string}))?([ ]*","[ ]*{ID}("="({ID}|{int}|{float}|{string}))?)* {
+    //variable detection
     char* token = strtok(yytext, " ,\t");
     char* type;
     int invalid = 0;
-    temp_var_count=0; // Initialize the counter
+    temp_var_count=0;
 
     while (token != NULL) {
         if (!is_datatype(token)) {
@@ -143,10 +170,8 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
                 invalid = 1;
                 break;
             } else {
-                // Check for initialization
                 char* init_value = strchr(token, '=');
                 if (init_value != NULL) {
-                    // Extract the initialization value
                     *init_value = '\0'; // Null-terminate the variable name
                     const char* varName = token;
                     if (is_declared(varName)) {
@@ -168,8 +193,6 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
                     insert_variable(token, type, "");
                     printf("Variable name: %s, Datatype: %s\n", token, type);
                 }
-
-                // Increment the counter for successfully declared variables
                 temp_var_count++;
                 var_count++;
             }
@@ -184,6 +207,7 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
 }
 
 {ID}[ ]*"="[ ]*({ID}|{int}|{float}|{string}) {
+    //value updating of previously declared variables
     char* var = strtok(yytext, " =");
     char* val = strtok(NULL, " =");
     if (!is_declared(var)) {
@@ -197,6 +221,7 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
 }
 
 "array"[ ]+{datatype}[ ]+{ID}[ ]+"of"[ ]+{int} {
+    //array declaration
     char* token = strtok(yytext, " \t");
     char* type;
     int invalid = 0;
@@ -231,70 +256,197 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
     }
 } 
 
-"loopw"[ ]+"as"[ ]+ { BEGIN(CONDITION); }
-<CONDITION>({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string})({Logical_operator}({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string}))* {
-    printf("while condition\n");
+
+"loopw"[ ]+"as"[ ]+ { 
+    //while loop syntax
+    BEGIN(WHILE_CONDITION);
+}
+
+<WHILE_CONDITION>({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string})([ ]+{Logical_operator}[ ]+({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string}))*[ ]* {
+    //while loop condition
+    char* token = strtok(yytext, " \t");
+    while (token != NULL) {
+        if(is_relation(token)){
+            Relational_operator_count++;
+            printf("Relational operator found\n");
+        }
+        else if(is_logic(token)){
+            Logical_operator_count++;
+            printf("Logical operator found\n");
+        }
+        token = strtok(NULL, " \t");
+    }
+    printf("WHILE LOOP: Condition\n");
+    loop_count++;
     BEGIN(WHILE_BODY);
 }
 
-<WHILE_BODY>"{"  { printf("WHILE LOOP: Start\n"); }
-<WHILE_BODY>"}"  { 
+<WHILE_BODY>"begin"  { printf("WHILE LOOP: Start\n"); }
+
+<WHILE_BODY>"end"  { 
     printf("WHILE LOOP: End\n");
     BEGIN(INITIAL);
 }
-<WHILE_BODY>.*  { 
-    // Process the code block here, e.g., "do something"
-    printf("WHILE LOOP Code: %s\n", yytext);
+
+<WHILE_BODY>.*  { printf("WHILE LOOP Code: %s\n", yytext); }
+
+
+"loopf"[ ]+"with"[ ]+ { 
+    //for loop syntax
+    BEGIN(FOR_CONDITION);
 }
+
+<FOR_CONDITION>{ID}[ ]+{int}"..."{int}[ ]+{int}[ ]* {
+    //for loop condition
+    printf("FOR LOOP: Condition\n");
+    loop_count++;
+    BEGIN(FOR_BODY);
+}
+
+<FOR_BODY>"begin"  { printf("FOR LOOP: Start\n"); }
+
+<FOR_BODY>"end"  { 
+    printf("FOR LOOP: End\n");
+    BEGIN(INITIAL);
+}
+
+<FOR_BODY>.*  { printf("FOR LOOP Code: %s\n", yytext); }
+
+
+"is"[ ]+ {
+    //if structure
+    printf("IS BLOCK\n");
+    is_declared_check=1;
+    conditional_count++;
+    BEGIN(IS_CONDITION);
+}
+
+"oris"[ ]+ { 
+    //else if structure
+    if (is_declared_check) {
+        printf("ORIS BLOCK\n");
+        conditional_count++;
+        BEGIN(IS_CONDITION);
+    } else {
+        printf("ERROR: 'oris' without preceding 'is'\n");
+    }
+}
+
+"or"[ ]* {
+    //else structure 
+    if (is_declared_check) {
+        printf("OR BLOCK\n");
+        conditional_count++;
+        BEGIN(IS_BODY);
+    } else {
+        printf("ERROR: 'or' without preceding 'is'\n");
+    }
+}
+
+<IS_CONDITION>({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string})([ ]+{Logical_operator}[ ]+({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string}))*[ ]* {
+    //if or else if condition check
+    char* token = strtok(yytext, " \t");
+    while (token != NULL) {
+        if(is_relation(token)){
+            Relational_operator_count++;
+            printf("Relational operator found\n");
+        }
+        else if(is_logic(token)){
+            Logical_operator_count++;
+            printf("Logical operator found\n");
+        }
+        token = strtok(NULL, " \t");
+    }
+    printf("IS CONDITION\n");
+    BEGIN(IS_BODY);
+}
+
+<IS_BODY>"{" { printf("START OF CODE BLOCK\n");}
+
+<IS_BODY>"}" {
+    printf("END OF CODE BLOCK\n");
+    BEGIN(INITIAL);
+}
+
+"si" {
+    //denotes end of if block and simmilar to fi
+    if(is_declared_check){
+        printf("END OF IS BLOCK\n");
+        is_declared_check=0;
+        BEGIN(INITIAL);
+    }
+    else{
+        printf("ERROR: 'si' without preceding 'is'\n");
+    }
+   
+}
+
+<IS_BODY>.* { printf("CODE: %s\n", yytext); }
+
 
 ; {statement_count++;}
 
 
 ({datatype}|{void})[ ]"main()"[ \n\t]*"{" { 
+    //check main function
     function_count++;
-    printf("main function\n"); 
+    printf("Main Function\n"); 
 }
+
 ({datatype}|{void})[ ]+"function"[ ]+{ID}"("({datatype}[ ]+{ID}([ ]*","[ ]*{datatype}[ ]{ID})*)?")"[ \n\t]*"{" {
+    //function declaration
     function_count++;
-    printf("function declaration\n");
+    printf("Function Declaration\n");
 }
 
 
-"#include<".*">" { 
+"#include<".*">" {
+    //header file
     header_count++;
-    printf("header file\n");
+    printf("Header File\n");
 }
 
 
 {ID}{Unary_operator} {
+    //operators check
     Unary_operator_count++;
     printf("Unary operator found\n");
 }
+
 {Unary_operator}{ID} {
     Unary_operator_count++;
     printf("Unary operator found\n");
 }
+
 ({ID}|{int}|{float}|{string})[ ]+{Relational_operator}[ ]+({ID}|{int}|{float}|{string}) {
     Relational_operator_count++;
     printf("Relational operator found\n");
 }
+
 {ID}[ ]*{Assignment_operator}[ ]*({ID}|{int}|{float}|{string}) {
     Assignment_operator_count++;
     printf("Assignment operator found\n");
 }
+
 ({ID}|{int}|{float}|{string})[ ]*{Logical_operator}[ ]*({ID}|{int}|{float}|{string}) {
     Logical_operator_count++;
     printf("Logical operator found\n");
 }
+
 {Not}[ ]*({ID}|{int}|{float}|{string}) {
     Logical_operator_count++;
     printf("Logical operator found\n");
 }
+
 ({ID}|{int}|{float}|{string})[ ]*{Arithmatic_operator}[ ]*({ID}|{int}|{float}|{string}) {
     Arithmatic_operator_count++;
     printf("Arithmatic operator found\n");
 }
-. {}
+
+
+. { 
+    //ignores everything else
+}
 
 %%
 
@@ -318,6 +470,8 @@ int main()
     printf("%d Arithmatic operators\n", Arithmatic_operator_count);
     printf("%d single line comments\n", scmt_count);
     printf("%d multiple line comments\n", mcmt_count);
+    printf("%d conditional statements\n", conditional_count);
+    printf("%d loops\n", loop_count);
 	printf("%d statements\n", statement_count);
 	return 0;
 }
