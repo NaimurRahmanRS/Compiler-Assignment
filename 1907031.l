@@ -281,9 +281,9 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
     BEGIN(WHILE_BODY);
 }
 
-<WHILE_BODY>"begin"  { printf("WHILE LOOP: Start\n"); }
+<WHILE_BODY>[ \t]*"begin"  { printf("WHILE LOOP: Start\n"); }
 
-<WHILE_BODY>"end"  { 
+<WHILE_BODY>[ \t]*"end"  { 
     printf("WHILE LOOP: End\n");
     BEGIN(INITIAL);
 }
@@ -303,9 +303,9 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
     BEGIN(FOR_BODY);
 }
 
-<FOR_BODY>"begin"  { printf("FOR LOOP: Start\n"); }
+<FOR_BODY>[ \t]*"begin"  { printf("FOR LOOP: Start\n"); }
 
-<FOR_BODY>"end"  { 
+<FOR_BODY>[ \t]*"end"  { 
     printf("FOR LOOP: End\n");
     BEGIN(INITIAL);
 }
@@ -361,9 +361,9 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
     BEGIN(IS_BODY);
 }
 
-<IS_BODY>"{" { printf("START OF CODE BLOCK\n");}
+<IS_BODY>[ \t]*"{" { printf("START OF CODE BLOCK\n");}
 
-<IS_BODY>"}" {
+<IS_BODY>[ \t]*"}" {
     printf("END OF CODE BLOCK\n");
     BEGIN(INITIAL);
 }
@@ -457,7 +457,7 @@ int yywrap()
 
 int main()
 {	
-	yyin = fopen( "sample.c", "r" );
+	yyin = fopen( "sample.txt", "r" );
 	yylex();
     printf("%d variables declared\n", var_count);
     printf("%d arrays declared\n", array_count);
