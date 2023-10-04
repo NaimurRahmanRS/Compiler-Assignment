@@ -296,7 +296,7 @@ mcmt \/\*([^*]|\*[^\/])*\*\/
     BEGIN(FOR_CONDITION);
 }
 
-<FOR_CONDITION>{ID}[ ]+{int}"..."{int}[ ]+{int}[ ]* {
+<FOR_CONDITION>{ID}[ ]+{int}"..."{int}[ ]+[-]?{int}[ ]* {
     //for loop condition
     printf("FOR LOOP: Condition\n");
     loop_count++;
@@ -458,6 +458,7 @@ int yywrap()
 int main()
 {	
 	yyin = fopen( "sample.txt", "r" );
+    yyout = fopen( "output.txt", "w" );
 	yylex();
     printf("%d variables declared\n", var_count);
     printf("%d arrays declared\n", array_count);
